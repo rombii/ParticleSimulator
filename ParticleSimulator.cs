@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
@@ -14,13 +15,14 @@ public class Window(int width, int height, string title) : GameWindow(GameWindow
 {
     private readonly float[] _vertices =
     [
-        -0.5f, -0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-         0.0f,  0.5f, 0.0f
+        -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+         0.0f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f
     ];
 
     private Shader _shader;
     private int _vertexArrayObject;
+    private readonly Stopwatch _timer = new();
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
@@ -35,6 +37,8 @@ public class Window(int width, int height, string title) : GameWindow(GameWindow
     {
         base.OnLoad();
         
+        _timer.Start();
+        
         GL.ClearColor(38/255.0f, 35/255.0f, 32/255.0f, 1.0f);
         
         var vertexBufferObject = GL.GenBuffer();
@@ -45,9 +49,12 @@ public class Window(int width, int height, string title) : GameWindow(GameWindow
 
         _vertexArrayObject = GL.GenVertexArray();
         GL.BindVertexArray(_vertexArrayObject);
-        GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+        GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 0);
         GL.EnableVertexAttribArray(0);
        
+        GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 3 * sizeof(float));
+        GL.EnableVertexAttribArray(1);
+        
         _shader = new Shader(Path.Combine("Shaders", "shader.vert"), Path.Combine("Shaders", "shader.frag"));
         _shader.Use();
     }
@@ -55,10 +62,17 @@ public class Window(int width, int height, string title) : GameWindow(GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
+
         
         GL.Clear(ClearBufferMask.ColorBufferBit);
         
         _shader.Use();
+        
+        var timeValue = _timer.Elapsed.TotalSeconds;
+        var opacity = (float)Math.Abs(Math.Sin(timeValue));
+        var vertexColorLocation = GL.GetUniformLocation(_shader.handle, "uniOpacity");
+        GL.Uniform1(vertexColorLocation, opacity);
+        
         GL.BindVertexArray(_vertexArrayObject);
         GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
         
